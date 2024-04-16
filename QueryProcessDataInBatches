@@ -1,0 +1,50 @@
+```
+--declaration of variables used
+DECLARE
+    @BatchCount BIGINT = 1500,
+    @MinID BIGINT = 0,
+    @MaxID BIGINT = 0,
+	  @CustomerId INT;
+
+--Customer Id
+Set @CustomerId = 73 
+  
+--drop the temp table if it already exists
+DROP TABLE IF EXISTS #OutputTable;
+  
+--create temp table that holds all the IDs we want to update
+CREATE TABLE #OutputTable (
+    Id INT,
+    Number nvarchar(64)
+);
+  
+--insert into the temp table the IDs we want to update
+INSERT INTO #OutputTable (Id, Number)
+   SELECT SlO.Id, 
+		  SlO.Number
+   FROM dbo.YourTable SlO 
+   WHERE SlO.customerId = @CustomerId 
+		and SlO.deleted = 0 
+		
+  
+--set the min and max row numbers before we enter the loop
+SET @MinID = (SELECT TOP 1 Id FROM #OutputTable ORDER BY Id);
+SET @MaxID = (SELECT TOP 1 Id FROM #OutputTable ORDER BY Id DESC);
+  
+--main update loop
+WHILE (@MinID <= @MaxID) --loop enter and exit condition
+	BEGIN
+		--update statement in batches of 3000 rows
+		UPDATE O
+		SET [Data] = 'Test123'
+		FROM dbo.YourTable O
+		INNER JOIN #OutputTable V ON (V.ID = O.ID)
+		WHERE V.ID BETWEEN @MinID AND (@MinID + @BatchCount - 1);
+  
+		SET @MinID += @BatchCount; --advance to the next batch of rows
+	END
+
+--drop the temp table
+DROP TABLE #OutputTable;
+
+GO
